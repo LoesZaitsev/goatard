@@ -9,6 +9,8 @@ window.onload = function() {
         cursors,
         ground,
         centerText,
+        scoreText,
+        cliffsHit = 0,
         
         gameActive,
         falling,
@@ -43,6 +45,9 @@ window.onload = function() {
             falling = false;
             player.body.velocity.x = worldSpeed;
             if( cursors.up.isDown ) {
+                cliffsHit++;
+                scoreText.text = '' + cliffsHit;
+                scoreText.visible = true;
                 player.body.velocity.x = 0;
                 player.body.velocity.y = -50;
             }
@@ -104,6 +109,9 @@ window.onload = function() {
     }
     
     function setupUI() {
+        scoreText = game.add.text(game.world.centerX, game.world.centerY - 60, '', { font: "80px Arial", fill: "#F78181", align: "center" });
+        scoreText.anchor.setTo(0.5, 0.5);
+        
         centerText = game.add.text(game.world.centerX, game.world.centerY, '', { font: "40px Arial", fill: "#ffffff", align: "center" });
         centerText.anchor.setTo(0.5, 0.5);
     }
