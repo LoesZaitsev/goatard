@@ -4,14 +4,22 @@ window.onload = function() {
                                                             create: create, 
                                                             update: update,
                                                             render: render }),
-        platforms,
+        /** Game Objects **/
+        platform,
+        cliffs,
         player,
         cursors,
         ground,
+
+        /** UI **/
         centerText,
         scoreText,
-        cliffsHit = 0,
-        
+        scoreRecordText,
+        tryAgainButton,
+
+        /** Control **/
+        maxScore = 0,
+        score = 0,
         gameActive,
         falling,
         worldSpeed = 150,
@@ -20,6 +28,7 @@ window.onload = function() {
     function preload () {
         game.load.image('ground', 'assets/sprites/platform.png');
         game.load.spritesheet('dude', 'assets/sprites/dude.png', 32, 48);
+        game.load.image('tryAgain', 'assets/ui/btn-game-cont.png', 50, 50);
     }
 
     function create () {
@@ -35,7 +44,8 @@ window.onload = function() {
     }
     
     function update() {
-        game.physics.arcade.collide(player, platforms);
+        game.physics.arcade.collide(player, platform);
+        game.physics.arcade.collide(player, cliffs, landedOnCliff);
         
         if( !cursors.up.isDown && !falling ) {
             falling = true;
@@ -45,9 +55,6 @@ window.onload = function() {
             falling = false;
             player.body.velocity.x = worldSpeed;
             if( cursors.up.isDown ) {
-                cliffsHit++;
-                scoreText.text = '' + cliffsHit;
-                scoreText.visible = true;
                 player.body.velocity.x = 0;
                 player.body.velocity.y = -50;
             }
@@ -65,22 +72,36 @@ window.onload = function() {
     }
     
     function setupCliffs() {
-        platforms = game.add.group();
-        platforms.enableBody = true;
-
-        ground = platforms.create(0, game.world.height - 128, 'ground');
+        platform = game.add.group();
+        platform.enableBody = true;
+        
+        ground = platform.create(0, 0, 'ground');
         ground.scale.setTo(2, 4);
         ground.checkWorldBounds = true;
-        ground.outOfBoundsKill = true;
+        ground.outOfBoundsKill = false;
         ground.body.immovable = true;
-        ground.body.velocity.x = -worldSpeed;
+        
+        ground.events.onOutOfBounds.add(function() {
+           ground.body.velocity.x = 0; 
+        });
+        
+        groundInitialPosition();
+        
+        cliffs = game.add.group();
+        cliffs.enableBody = true;
 
-        addCliff();        
+        addCliff();
+    }
+    
+    function groundInitialPosition() {
+        ground.x = 0;
+        ground.y = game.world.height - 128;
+        ground.body.velocity.x = -worldSpeed;        
     }
     
     function addCliff() {
         if( gameActive ) {
-            var cliff = platforms.create(game.world.width + 150 + (150 * Math.random()), game.world.height - 128, 'ground');
+            var cliff = cliffs.create(game.world.width + 150 + (150 * Math.random()), game.world.height - 128, 'ground');
             cliff.scale.setTo(0.01 + (0.1 * Math.random()), 4);
             cliff.checkWorldBounds = true;
             cliff.events.onEnterBounds.add(function() {
@@ -92,20 +113,50 @@ window.onload = function() {
         }
     }
     
+    function landedOnCliff(obj1, obj2) {
+        if( falling ) {
+            score++;
+            scoreText.text = '' + score;
+            scoreText.visible = true;
+        }
+    }
+    
     function setupPlayer() {
-        player = game.add.sprite(game.world.width * .25, game.world.height - 180, 'dude');
+        player = game.add.sprite(0, 0, 'dude');
         game.physics.arcade.enable(player);
-        player.body.gravity.y = 600;
-        player.body.velocity.x = worldSpeed;
         player.checkWorldBounds = true;
         player.events.onOutOfBounds.add(function() {
+            player.body.velocity.x = 0;
+            player.body.gravity.y = 0;
             gameOver();    
         });
+        
+        playerInitialPosition();
         
         player.animations.add('left', [0, 1, 2, 3], 10, true);
         player.animations.add('right', [5, 6, 7, 8], 10, true);
         
         falling = false;
+    }
+    
+    function playerInitialPosition() {
+        player.x = game.world.width * .25;
+        player.y = game.world.height - 200;
+        player.body.gravity.y = 600;
+        player.body.velocity.x = worldSpeed;        
+    }
+    
+    function tryAgain() {
+        gameActive = true;
+        
+        groundInitialPosition();
+        playerInitialPosition();
+        toggleGameOverText(false);
+        score = 0;
+        scoreText.text = '' + score;
+        scoreText.visible = false;
+        
+        addCliff();
     }
     
     function setupUI() {
@@ -114,16 +165,44 @@ window.onload = function() {
         
         centerText = game.add.text(game.world.centerX, game.world.centerY, '', { font: "40px Arial", fill: "#ffffff", align: "center" });
         centerText.anchor.setTo(0.5, 0.5);
+        
+        scoreRecordText = game.add.text(game.world.centerX, 0, scoreLabel(), { font: "20px Arial", fill: "#ffffff", align: "center" });
+        scoreRecordText.anchor.setTo(0.5, 0.0);
+        scoreRecordText.visible = true;
+        
+        tryAgainButton = game.add.button(game.world.centerX, game.world.centerY + 100, 'tryAgain', tryAgain, this, 2, 1, 0);
+        tryAgainButton.anchor.setTo(0.5, 0.5);
+        tryAgainButton.visible = false;
+        tryAgainButton.events.onInputDown.add(function() {
+            tryAgainButton.visible = false;
+            tryAgain();
+        });
+    }
+    
+    function toggleGameOverText(on) {
+        centerText.visible = on;
+        tryAgainButton.visible = on;
     }
     
     function render() {
-        //game.debug.spriteInfo(ground, 32, 32);
+        //game.debug.spriteInfo(player, 32, 32);
+        //game.debug.body(player);
     }
     
     function gameOver() {
         console.log('should be game over');
         centerText.text = 'Game Over';
-        centerText.visible = true;
-        gameActive = true;
+        toggleGameOverText(true);
+        
+        if( score >  maxScore ) {
+            maxScore = score;
+        }
+        scoreRecordText.text = scoreLabel();
+        
+        gameActive = false;
+    }
+    
+    function scoreLabel() {
+        return 'SCORE: ' + maxScore;
     }
 };
