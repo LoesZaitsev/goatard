@@ -1,0 +1,7 @@
+{
+  "name": "Goatard",
+  "version": "0.0.1",
+  "devDependencies": {
+    "phaser": "^2.4.6"
+  }
+}
