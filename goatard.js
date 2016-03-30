@@ -7,6 +7,7 @@ window.onload = function() {
         /** Game Objects **/
         platform,
         cliffs,
+        cliffsPool = [],
         player,
         cursors,
         ground,
@@ -93,24 +94,29 @@ window.onload = function() {
         addCliff();
     }
     
-    function groundInitialPosition() {
+    function groundInitialPosition() {  
         ground.x = 0;
         ground.y = game.world.height - 128;
         ground.body.velocity.x = -worldSpeed;        
     }
     
     function addCliff() {
-        if( gameActive ) {
-            var cliff = cliffs.create(game.world.width + 150 + (150 * Math.random()), game.world.height - 128, 'ground');
-            cliff.scale.setTo(0.01 + (0.1 * Math.random()), 4);
-            cliff.checkWorldBounds = true;
-            cliff.events.onEnterBounds.add(function() {
-               cliff.outOfBoundsKill = true;
-               addCliff();
-            });
-            cliff.body.immovable = true;
-            cliff.body.velocity.x = -worldSpeed;
-        }
+        console.log('cliff pool: ' + cliffsPool.length);
+        var cliff = cliffs.create(game.world.width + 150 + (150 * Math.random()), game.world.height - 128, 'ground');
+        cliff.scale.setTo(0.01 + (0.1 * Math.random()), 4);
+        cliff.checkWorldBounds = true;
+        cliff.events.onEnterBounds.add(function() {
+           cliff.outOfBoundsKill = true;
+           addCliff();
+        });
+        cliff.events.onKilled.add(function() {
+            var deadCliff = cliffsPool.shift();
+            deadCliff.events.destroy();
+            deadCliff.destroy();
+        });
+        cliff.body.immovable = true;
+        cliff.body.velocity.x = -worldSpeed;
+        cliffsPool.push(cliff);
     }
     
     function landedOnCliff(obj1, obj2) {
@@ -142,7 +148,7 @@ window.onload = function() {
     function playerInitialPosition() {
         player.x = game.world.width * .25;
         player.y = game.world.height - 200;
-        player.body.gravity.y = 600;
+        player.body.gravity.y = 900;
         player.body.velocity.x = worldSpeed;        
     }
     
@@ -155,6 +161,12 @@ window.onload = function() {
         score = 0;
         scoreText.text = '' + score;
         scoreText.visible = false;
+        
+        for( var i = 0; i < cliffsPool.length; i++  ) {
+            cliffsPool[i].events.destroy();
+            cliffsPool[i].destroy();
+        }
+        cliffsPool = [];
         
         addCliff();
     }
@@ -190,7 +202,6 @@ window.onload = function() {
     }
     
     function gameOver() {
-        console.log('should be game over');
         centerText.text = 'Game Over';
         toggleGameOverText(true);
         
